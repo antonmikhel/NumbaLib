@@ -3,6 +3,10 @@ import time
 import numba
 import numpy
 
+from logging import metalogger
+
+log = metalogger.MetaLogger()
+
 
 @numba.jit("void(u1[:,:,:],u1[:,:,:])", nopython=True, cache=True, nogil=True)
 def __numba_interp_bilinear(input_image, output_image):
@@ -59,18 +63,19 @@ def __python_interp_bilinear(input_image, output_image):
     w_ratio = width / in_width
     h_ratio = height / in_height
 
-    for y in range(height):
-        orig_y = float(y) / h_ratio
+    for y in range(1, height):
+        orig_y = float(y) / h_ratio - 1
 
         i_y = int(orig_y)
         floor_y = orig_y - i_y
         ceil_y = 1 - floor_y
-        for x in range(width):
+        for x in range(1, width):
+
             r = 0.0
             g = 0.0
             b = 0.0
 
-            orig_x = float(x) / w_ratio
+            orig_x = float(x) / w_ratio - 1
 
             i_x = int(orig_x)
             floor_x = orig_x - i_x
@@ -82,9 +87,9 @@ def __python_interp_bilinear(input_image, output_image):
             mult4 = floor_x * floor_y
 
             px1 = input_image[i_y][i_x]
-            px2 = input_image[i_y][i_x]
-            px3 = input_image[i_y][i_x]
-            px4 = input_image[i_y][i_x]
+            px2 = input_image[i_y][i_x + 1]
+            px3 = input_image[i_y + 1][i_x]
+            px4 = input_image[i_y + 1][i_x + 1]
 
             r += px1[0] * mult1 + px2[0] * mult2
             g += px1[1] * mult1 + px2[1] * mult2
@@ -116,6 +121,8 @@ def __test_interp():
 
     start_time = time.time()
 
+    log.info("Starting up...")
+
     input_image_path = r"D:\Dev\NumbaLib\Assets\Peter.jpg"
     resize_factor = 10
 
@@ -125,15 +132,15 @@ def __test_interp():
 
     # time_before_python_run = time.time()
     # __python_interp_bilinear(input_image, output_image)
-    # print "Pure Python Version Took %.3f seconds" % (time.time() - time_before_python_run)
+    # log.info("Pure Python Version Took %.3f seconds" % (time.time() - time_before_python_run))
 
     time_before_numba = time.time()
     interp_bilinear(input_image, output_image)
-    print "Numba Version Took %.3f seconds" % (time.time() - time_before_numba)
+    log.info("Numba Version Took %.3f seconds" % (time.time() - time_before_numba))
 
     cv2.imwrite(r"D:\Dev\NumbaLib\Assets\Peter_Resized.jpg", output_image)
 
-    print "Test interp done @ %.3f seconds" % (time.time() - start_time)
+    log.info("Test interp done @ %.3f seconds" % (time.time() - start_time))
 
 
 if __name__ == "__main__":
